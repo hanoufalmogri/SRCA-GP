@@ -9,10 +9,8 @@ Data Availability
 The SRCA dataset used in this analysis cannot be shared publicly due to confidentiality restrictions.
 The code, however, is fully available and documented.
 
-Required R Packages
-tidyverse, ggplot2, rstatix, effectsize, emmeans, etc.
-
 Contact
 For questions or replication requests, contact:
 hanoufalmogri@gmail.com
+
 Hanouf Almogri
