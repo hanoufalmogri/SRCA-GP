@@ -23,6 +23,7 @@ path_csv ='the data file path in the device, since the data is confidential its 
 DT = fread(path_csv)
 
 
+
 col_response_time = "ResponseTime"               
 col_report_source = "SourceName"               
 col_region        = "RegionName"                 
@@ -265,6 +266,7 @@ incident_stats
 
 
 
+
 # after this line we will deal with the data cleaning 
 
 dRriyadh = subset(dRriyadh, !SourceName %in% c("almusaf alelcrtoni", "Almusaf Alelcrtoni"))
@@ -403,7 +405,7 @@ print(oneWaySource); print(oneWayDisp); print(oneWayVehi);print(oneWayLoc);print
 
 # ---- Games–Howell post-hoc Under {rstatix} Package ----
 
-ghSource = games_howell_test(dRriyadh, transRT ~ SourceName)
+ghSource = games_howell_test(dRriyadh, transRT ~ SourceName,detailed = TRUE)
 ghDisp   = games_howell_test(dRriyadh, transRT ~ PQADispatchLevel)
 ghVehi   = games_howell_test(dRriyadh, transRT ~ VehicleTypeName)
 ghLoc    = games_howell_test(dRriyadh, transRT ~ LocationTypeName)
@@ -411,6 +413,15 @@ ghIns    = games_howell_test(dRriyadh, transRT ~ IncidentTypeName)
 ghDay    = games_howell_test(dRriyadh, transRT ~ WeekDay)
 
 print(ghSource); print(ghDisp); print(ghVehi);print(ghLoc);print(ghIns);print(ghDay)
+
+aggregate(transRT ~ SourceName, dRriyadh, mean)
+aggregate(transRT ~ PQADispatchLevel, dRriyadh, mean)
+aggregate(transRT ~ VehicleTypeName, dRriyadh, mean)
+aggregate(transRT ~ LocationTypeName, dRriyadh, mean)
+aggregate(transRT ~ IncidentTypeName, dRriyadh, mean)
+aggregate(transRT ~ WeekDay, dRriyadh, mean)
+
+
 
 sig_incident = ghIns %>%
   filter(p.adj < 0.05) %>%
@@ -448,6 +459,8 @@ write.csv(ghVehi, "vehiTypeGH.csv", row.names = FALSE)
 write.csv(ghLoc, "locTypeGH.csv", row.names = FALSE)
 write.csv(ghIns, "inscTypeGH.csv", row.names = FALSE)
 write.csv(ghDay, "dayTypeGH.csv", row.names = FALSE)
+
+
 ######################### heatmap (indent type and) ######################### 
 
 
@@ -455,7 +468,7 @@ all_types = sort(unique(dRriyadh$IncidentTypeName))
 
 heat_df = ghIns %>%
   mutate(
-    value = ifelse(p.adj < 0.05, estimate, NA_real_)
+    value = ifelse(p.adj < 0.05, ((estimate)*-1), NA_real_)
   ) %>%
   select(group1, group2, value)
 
@@ -497,31 +510,30 @@ ggplot(heat_sym, aes(x = group1, y = group2, fill = value)) +
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
   )
 
-
-
+gh_incident_top = ghIns
+gh_incident_top$estrev = gh_incident_top$estimate*-1
 
 topN = 20
 
-gh_incident_top =  ghIns %>%
+gh_incident_top =  gh_incident_top %>%
   filter(p.adj < 0.05) %>%
   mutate(abs_est = abs(estimate),
          comp = paste(group1, "–", group2)) %>%
   arrange(desc(abs_est)) %>%
   slice_head(n = topN) %>%
-  arrange(estimate) %>%
+  arrange(estrev) %>%
   mutate(comp = fct_inorder(comp))
-gh_incident_top$direction <- ifelse(gh_incident_top$estimate > 0,
+gh_incident_top$direction <- ifelse(gh_incident_top$estrev > 0,
                                     "Slower",
                                     "Faster")
 
 ggplot(gh_incident_top,
-       aes(x = estimate, y = comp, color = direction)) +
+       aes(x = estrev, y = comp, color = direction)) +
   
-  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_vline(xintercept = 0, linetype = 3) +
   
-  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+  geom_errorbarh(aes(xmin = conf.low*-1 , xmax = conf.high*-1),
                  height = 0.15) +
-  
   geom_point(size = 3) +
   
   scale_color_manual(
@@ -541,7 +553,6 @@ ggplot(gh_incident_top,
   theme_minimal(base_size = 10)
 
 ######################### Effect size ######################### 
-
 
 omegaSource = omega_squared(oneWaySource)
 omegaDis = omega_squared(oneWayDisp)
@@ -583,7 +594,33 @@ levels(dRriyadh$SourceName)
 
 #the baseline is the first leval show up,
 #the baseline of our model => transRTsec = ALPHA + A + Home + Asefne = 7.3826371, which is almost27 min
+######################### predicting   ######################### 
+invBoxcox = function(ytr, lambda){
+  ((lambda*ytr)+1)^(1/lambda)
+}
 
+newCase1 = data.frame(
+  SourceName = "Nine-One-One",
+  PQADispatchLevel = "ALPHA",
+  LocationTypeName = "Home",
+  IncidentTypeName = "A"
+)
+
+newCase2 = data.frame(
+  SourceName = "Asefne",
+  PQADispatchLevel = "ALPHA",
+  LocationTypeName = "Home",
+  IncidentTypeName = "A"
+)
+
+pred1 = predict(FullModel, newdata = newCase1)
+pred2 = predict(FullModel, newdata = newCase2)
+
+pred1
+pred2
+
+invBoxcox(pred1 , lambda_best )
+invBoxcox(pred2 , lambda_best )
 ######################### histogram ######################### 
 
 
@@ -684,3 +721,7 @@ head(incProfiles)
 
 sil= silhouette (kmInc$cluster,eucDist)
 fviz_silhouette(sil, palette = c("defulte"), ggtheme = theme_classic())
+
+
+######################### Shiny app setup  ######################### 
+save(FullModel, dRriyadh,lambda_best, file = "GPmodel.Rdata")
