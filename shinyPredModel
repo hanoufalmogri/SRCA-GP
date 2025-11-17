@@ -1,0 +1,154 @@
+library(shiny)
+library(shinythemes)
+library(dplyr)
+
+load("GPmodel.Rdata")
+
+# Inverse Box-Cox
+invBoxcox <- function(ytr, lambda){
+  ((lambda * ytr) + 1)^(1 / lambda)
+}
+source_choices   <- levels(dRriyadh$SourceName)
+dispatch_choices <- levels(dRriyadh$PQADispatchLevel)
+location_choices <- levels(dRriyadh$LocationTypeName)
+incident_choices <- levels(dRriyadh$IncidentTypeName)
+
+ui <- fluidPage(
+  
+  # Custom color styling
+  tags$head(
+    tags$style(HTML("
+      
+      body {
+        background-color: #FFFFFF;
+        font-family: 'Helvetica Neue', sans-serif;
+      }
+      
+      .title-text {
+        font-weight: 700;
+        margin-bottom: 5px;
+        color: #6B4F4F;                 /* Brown */
+      }
+      
+      .subtitle-text {
+        color: #6B4F4F;                  /* Brown, lighter */
+        margin-bottom: 20px;
+      }
+      
+      .card-box {
+        background: #FFFFFF;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #E6D8D8;       /* Soft brown border */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+        margin-bottom: 25px;
+      }
+      
+      .pred-card {
+        background: #FFF7F6;             /* Very soft salmon tint */
+        border: 1px solid #FA8072;       /* Salmon border */
+        padding: 35px;
+        text-align: center;
+        border-radius: 12px;
+      }
+      
+      .pred-value {
+        font-size: 42px;
+        font-weight: 800;
+        color: #FA8072;                  /* Salmon red */
+      }
+      
+      .pred-label {
+        color: #6B4F4F;                  /* Brown */
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      
+      .btn-salmon {
+        background-color: #FA8072 !important;
+        border-color: #FA8072 !important;
+        color: white !important;
+        font-weight: 600;
+      }
+      
+      .btn-salmon:hover {
+        background-color: #E96E63 !important;  /* Slightly darker salmon */
+        border-color: #E96E63 !important;
+      }
+      
+    "))
+  ),
+  
+  # ---------------- HEADER -----------------
+  fluidRow(
+    column(
+      width = 12,
+      h2("Ambulance Response Time Predictor", class = "title-text"),
+      h5("SRCA – Riyadh Multifactor Model", class = "subtitle-text")
+    )
+  ),
+  
+  # ---------------- LAYOUT -----------------
+  fluidRow(
+    
+    # LEFT PANEL
+    column(
+      width = 4,
+      div(class = "card-box",
+          h4("Case Profile", style = "color:#6B4F4F;"),
+          
+          selectInput("source",   "Report Source:",   choices = source_choices),
+          selectInput("dispatch", "Dispatch Level:", choices = dispatch_choices),
+          selectInput("location", "Location Type:",  choices = location_choices),
+          selectInput("incident", "Incident Type:",  choices = incident_choices),
+          
+          br(),
+          actionButton("predictBtn", "Predict Response Time", class = "btn btn-salmon btn-block")
+      )
+    ),
+    
+    # RIGHT PANEL
+    column(
+      width = 8,
+      div(class = "card-box",
+          
+          h4("Predicted Response Time", style = "color:#6B4F4F;"),
+          
+          div(
+            class = "pred-card",
+            uiOutput("prediction_ui"),
+            div("Estimated ambulance response time (minutes)",
+                class = "pred-label")
+          ),
+          
+          br(),
+          p("This prediction is based on the multifactor statistical model described in the analysis chapter. Values are back-transformed using the inverse Box–Cox transformation (λ = 0.0202).",
+            style = "color:#6B4F4F;")
+      )
+    )
+  )
+)
+
+# ---------------- SERVER -----------------
+
+server <- function(input, output, session) {
+  
+  observeEvent(input$predictBtn, {
+    
+    newCase <- data.frame(
+      SourceName       = factor(input$source,   levels = levels(dRriyadh$SourceName)),
+      PQADispatchLevel = factor(input$dispatch, levels = levels(dRriyadh$PQADispatchLevel)),
+      LocationTypeName = factor(input$location, levels = levels(dRriyadh$LocationTypeName)),
+      IncidentTypeName = factor(input$incident, levels = levels(dRriyadh$IncidentTypeName))
+    )
+    
+    pred_bc <- predict(FullModel, newdata = newCase)
+    pred_min <- invBoxcox(pred_bc, lambda_best)
+    
+    output$prediction_ui <- renderUI({
+      span(paste0(round(pred_min, 2), " min"), class = "pred-value")
+    })
+  })
+}
+
+shinyApp(ui = ui, server = server)
