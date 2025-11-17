@@ -18,7 +18,7 @@ library(tidyr)
 library(factoextra)
 library(cluster)
 
-path_csv ='/Users/alhanoufalmogri/Desktop/projects/Graduation Project/GP Data/TRY 2 CSV.csv'
+path_csv ='the data file path in the device, since the data is confidential its not possible to show it'
 
 DT = fread(path_csv)
 
