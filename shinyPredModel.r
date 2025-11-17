@@ -27,11 +27,11 @@ ui <- fluidPage(
       .title-text {
         font-weight: 700;
         margin-bottom: 5px;
-        color: #6B4F4F;                 /* Brown */
+        color: #6B4F4F;                 
       }
       
       .subtitle-text {
-        color: #6B4F4F;                  /* Brown, lighter */
+        color: #6B4F4F;                  
         margin-bottom: 20px;
       }
       
@@ -39,14 +39,14 @@ ui <- fluidPage(
         background: #FFFFFF;
         border-radius: 12px;
         padding: 20px;
-        border: 1px solid #E6D8D8;       /* Soft brown border */
+        border: 1px solid #E6D8D8;       
         box-shadow: 0 2px 5px rgba(0,0,0,0.07);
         margin-bottom: 25px;
       }
       
       .pred-card {
-        background: #FFF7F6;             /* Very soft salmon tint */
-        border: 1px solid #FA8072;       /* Salmon border */
+        background: #FFF7F6;             
+        border: 1px solid #FA8072;       
         padding: 35px;
         text-align: center;
         border-radius: 12px;
@@ -55,11 +55,11 @@ ui <- fluidPage(
       .pred-value {
         font-size: 42px;
         font-weight: 800;
-        color: #FA8072;                  /* Salmon red */
+        color: #FA8072;                 
       }
       
       .pred-label {
-        color: #6B4F4F;                  /* Brown */
+        color: #6B4F4F;                 
         font-size: 14px;
         margin-top: 8px;
       }
@@ -72,7 +72,7 @@ ui <- fluidPage(
       }
       
       .btn-salmon:hover {
-        background-color: #E96E63 !important;  /* Slightly darker salmon */
+        background-color: #E96E63 !important;  
         border-color: #E96E63 !important;
       }
       
